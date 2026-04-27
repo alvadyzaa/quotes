@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Quote Generator</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      min-height: 100vh;
+      background: #f0f0f0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 28px;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif;
+      padding: 40px 20px 60px;
+    }
+
+    .nav {
+      display:flex; gap:8px;
+      background:#fff; padding:6px;
+      border-radius:14px;
+      box-shadow:0 2px 12px rgba(0,0,0,0.08);
+    }
+    .nav a {
+      padding:8px 20px; border-radius:10px;
+      font-size:13px; font-weight:600;
+      text-decoration:none; color:#888;
+      transition:all .2s;
+    }
+    .nav a.active { background:#1a1a1a; color:#fff; }
+    .nav a:hover:not(.active){ background:#f0f0f0; color:#333; }
+
+    /* ── Card preview 1080→540 ── */
+    .canvas-wrapper { width: 540px; height: 540px; }
+
+    #quote-card {
+      width: 1080px;
+      height: 1080px;
+      background: #fff;
+      position: relative;
+      transform-origin: top left;
+      transform: scale(0.5);
+      overflow: hidden;
+      border: 1px solid #ddd;
+    }
+
+    .quote-body {
+      position: absolute;
+      top: 50%;
+      left: 80px;
+      right: 80px;
+      transform: translateY(-55%);
+    }
+
+    #card-quote {
+      font-size: 68px;
+      font-weight: 400;
+      line-height: 1.35;
+      color: #1a1a1a;
+      letter-spacing: -1px;
+      margin-bottom: 64px;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    #card-author {
+      font-size: 38px;
+      font-weight: 300;
+      color: #555;
+      letter-spacing: -0.3px;
+    }
+
+    /* ── Controls ── */
+    .controls {
+      background: white;
+      border-radius: 16px;
+      padding: 24px 28px;
+      width: 540px;
+      box-shadow: 0 2px 16px rgba(0,0,0,0.08);
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .controls h2 {
+      font-size: 14px;
+      font-weight: 600;
+      color: #111;
+    }
+
+    .field { display: flex; flex-direction: column; gap: 6px; }
+
+    label {
+      font-size: 11px;
+      font-weight: 500;
+      color: #999;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    /* Formatting toolbar */
+    .fmt-bar {
+      display: flex;
+      gap: 4px;
+      margin-bottom: 4px;
+    }
+
+    .fmt-bar button {
+      flex: none;
+      width: 30px;
+      height: 28px;
+      border: 1.5px solid #e5e5e5;
+      border-radius: 6px;
+      background: #fafafa;
+      color: #333;
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.15s;
+      padding: 0;
+    }
+    .fmt-bar button:hover { background: #eee; }
+    .fmt-bar button.active { background: #1a1a1a; color: #fff; border-color: #1a1a1a; }
+
+    textarea, input[type="text"] {
+      font-family: inherit;
+      font-size: 14px;
+      border: 1.5px solid #e5e5e5;
+      border-radius: 10px;
+      padding: 10px 14px;
+      color: #111;
+      resize: none;
+      outline: none;
+      transition: border-color 0.2s;
+      background: #fafafa;
+    }
+    textarea:focus, input[type="text"]:focus {
+      border-color: #1a1a1a;
+      background: #fff;
+    }
+    textarea { height: 95px; line-height: 1.5; }
+
+    .color-row { display: flex; gap: 10px; }
+    .color-row .field { flex: 1; }
+
+    input[type="color"] {
+      width: 100%;
+      height: 38px;
+      border: 1.5px solid #e5e5e5;
+      border-radius: 10px;
+      cursor: pointer;
+      padding: 2px 4px;
+      background: #fafafa;
+    }
+
+    .btn-row { display: flex; gap: 10px; margin-top: 2px; }
+
+    .btn-row button {
+      flex: 1;
+      padding: 11px;
+      border: none;
+      border-radius: 10px;
+      font-family: inherit;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.2s;
+      width: auto;
+      height: auto;
+    }
+    .btn-row button:hover { opacity: 0.8; }
+    .btn-row button:active { transform: scale(0.98); }
+    #btn-preview  { background: #1a1a1a; color: #fff; }
+    #btn-download { background: #f0f0f0; color: #1a1a1a; }
+  </style>
+</head>
+<body>
+
+  <div class="nav">
+    <a href="index.html" class="active">V1 — Simple</a>
+    <a href="v2.html">V2 — Pro</a>
+  </div>
+
+  <!-- Card Preview -->
+  <div class="canvas-wrapper">
+    <div id="quote-card">
+      <div class="quote-body">
+        <p id="card-quote">Tulis quotes disini</p>
+        <p id="card-author">— recausze</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Controls -->
+  <div class="controls">
+    <h2>✦ Quote Generator</h2>
+
+    <div class="field">
+      <label>Teks Quote</label>
+      <!-- Formatting buttons -->
+      <div class="fmt-bar">
+        <button id="fmt-b" title="Bold"><b>B</b></button>
+        <button id="fmt-i" title="Italic"><i>I</i></button>
+        <button id="fmt-u" title="Underline"><u>U</u></button>
+        <button id="fmt-s" title="Strikethrough"><s>S</s></button>
+        <button id="fmt-caps" title="UPPERCASE" style="width:auto;padding:0 8px;font-size:11px;">AA</button>
+        <button id="fmt-lower" title="lowercase" style="width:auto;padding:0 8px;font-size:11px;">aa</button>
+      </div>
+      <textarea id="inp-quote" spellcheck="false">Tulis quotes disini</textarea>
+    </div>
+
+    <div class="field">
+      <label>Nama / Author</label>
+      <input type="text" id="inp-author" value="— recausze" placeholder="— Nama kamu" />
+    </div>
+
+    <div class="color-row">
+      <div class="field">
+        <label>Background</label>
+        <input type="color" id="inp-bg" value="#ffffff" />
+      </div>
+      <div class="field">
+        <label>Quote</label>
+        <input type="color" id="inp-text" value="#1a1a1a" />
+      </div>
+      <div class="field">
+        <label>Author</label>
+        <input type="color" id="inp-ac" value="#555555" />
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button id="btn-preview">Preview</button>
+      <button id="btn-download">⬇ Download PNG</button>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script>
+    const card      = document.getElementById('quote-card');
+    const cardQuote = document.getElementById('card-quote');
+    const cardAuthor= document.getElementById('card-author');
+    const inpQuote  = document.getElementById('inp-quote');
+    const inpAuthor = document.getElementById('inp-author');
+    const inpBg     = document.getElementById('inp-bg');
+    const inpText   = document.getElementById('inp-text');
+    const inpAc     = document.getElementById('inp-ac');
+
+    const MAX_FONT = 68, MIN_FONT = 28;
+
+    // ── Formatting state ──
+    const fmtState = { bold: false, italic: false, underline: false, strikethrough: false };
+
+    function applyCardStyles() {
+      cardQuote.style.fontWeight      = fmtState.bold          ? '700' : '400';
+      cardQuote.style.fontStyle       = fmtState.italic        ? 'italic' : 'normal';
+      cardQuote.style.textDecoration  = fmtState.underline     ? 'underline'
+                                      : fmtState.strikethrough ? 'line-through' : 'none';
+    }
+
+    function toggleFmt(key, btnId) {
+      fmtState[key] = !fmtState[key];
+      document.getElementById(btnId).classList.toggle('active', fmtState[key]);
+      applyCardStyles();
+    }
+
+    document.getElementById('fmt-b').addEventListener('click', () => toggleFmt('bold', 'fmt-b'));
+    document.getElementById('fmt-i').addEventListener('click', () => toggleFmt('italic', 'fmt-i'));
+    document.getElementById('fmt-u').addEventListener('click', () => toggleFmt('underline', 'fmt-u'));
+    document.getElementById('fmt-s').addEventListener('click', () => toggleFmt('strikethrough', 'fmt-s'));
+
+    // UPPERCASE / lowercase transform
+    document.getElementById('fmt-caps').addEventListener('click', () => {
+      inpQuote.value = inpQuote.value.toUpperCase();
+      cardQuote.style.textTransform = 'uppercase';
+      update();
+    });
+    document.getElementById('fmt-lower').addEventListener('click', () => {
+      inpQuote.value = inpQuote.value.toLowerCase();
+      cardQuote.style.textTransform = 'none';
+      update();
+    });
+
+    // ── Auto-fit font size ──
+    function autoFitFont() {
+      cardQuote.style.fontSize = MAX_FONT + 'px';
+      const budget = 1080 * 0.72;
+      let size = MAX_FONT;
+      while (size > MIN_FONT) {
+        cardQuote.style.fontSize = size + 'px';
+        if (cardQuote.scrollHeight + 80 + 64 <= budget) break;
+        size -= 2;
+      }
+    }
+
+    function update() {
+      cardQuote.innerText  = inpQuote.value  || 'Tulis quotes disini';
+      cardAuthor.innerText = inpAuthor.value || '— Nama';
+      card.style.background   = inpBg.value;
+      cardQuote.style.color   = inpText.value;
+      cardAuthor.style.color  = inpAc.value;
+      applyCardStyles();
+      autoFitFont();
+    }
+
+    [inpQuote, inpAuthor, inpBg, inpText, inpAc].forEach(el => el.addEventListener('input', update));
+    document.getElementById('btn-preview').addEventListener('click', update);
+
+    // ── Download — off-screen clone (no glitch) ──
+    document.getElementById('btn-download').addEventListener('click', () => {
+      const clone = card.cloneNode(true);
+      clone.style.transform = 'none';
+      clone.style.position  = 'fixed';
+      clone.style.top       = '-9999px';
+      clone.style.left      = '-9999px';
+      clone.style.border    = 'none';
+      document.body.appendChild(clone);
+
+      html2canvas(clone, {
+        scale: 1,
+        width: 1080,
+        height: 1080,
+        useCORS: true,
+        backgroundColor: inpBg.value
+      }).then(canvas => {
+        document.body.removeChild(clone);
+        const a = document.createElement('a');
+        a.download = 'quote.png';
+        a.href = canvas.toDataURL('image/png');
+        a.click();
+      });
+    });
+  </script>
+</body>
+</html>
