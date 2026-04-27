@@ -129,7 +129,6 @@
       flex-wrap: wrap;
       margin-bottom: 4px;
     }
-
     .fmt-bar button {
       flex: none;
       min-width: 36px;
@@ -150,7 +149,11 @@
       touch-action: manipulation;
     }
     .fmt-bar button:hover { background: #eee; }
-    .fmt-bar button.active { background: #1a1a1a; color: #fff; border-color: #1a1a1a; }
+    .fmt-hint {
+      font-size: 10.5px;
+      color: #bbb;
+      margin-top: 2px;
+    }
 
     textarea, input[type="text"] {
       font-family: inherit;
@@ -237,13 +240,14 @@
     <div class="field">
       <label>Teks Quote</label>
       <div class="fmt-bar">
-        <button id="fmt-b" title="Bold"><b>B</b></button>
-        <button id="fmt-i" title="Italic"><i>I</i></button>
-        <button id="fmt-u" title="Underline"><u>U</u></button>
-        <button id="fmt-s" title="Strikethrough"><s>S</s></button>
+        <button id="fmt-b" title="Bold — wrap pilihan teks dengan **"><b>B</b></button>
+        <button id="fmt-i" title="Italic — wrap pilihan teks dengan *"><i>I</i></button>
+        <button id="fmt-u" title="Underline — wrap pilihan teks dengan _"><u>U</u></button>
+        <button id="fmt-s" title="Strikethrough — wrap pilihan teks dengan ~~"><s>S</s></button>
         <button id="fmt-caps" title="UPPERCASE">AA</button>
         <button id="fmt-lower" title="lowercase">aa</button>
       </div>
+      <div class="fmt-hint">Pilih kata → klik B/I/U/S untuk format per kata</div>
       <textarea id="inp-quote" spellcheck="false">Tulis quotes disini</textarea>
     </div>
 
@@ -298,37 +302,50 @@
     scaleCard();
     window.addEventListener('resize', scaleCard);
 
-    // ── Formatting state ──
-    const fmtState = { bold: false, italic: false, underline: false, strikethrough: false };
-
-    function applyCardStyles() {
-      cardQuote.style.fontWeight      = fmtState.bold          ? '700' : '400';
-      cardQuote.style.fontStyle       = fmtState.italic        ? 'italic' : 'normal';
-      cardQuote.style.textDecoration  = fmtState.underline     ? 'underline'
-                                      : fmtState.strikethrough ? 'line-through' : 'none';
+    // ── Inline wrap helper ──
+    function wrapSelection(open, close) {
+      const start = inpQuote.selectionStart;
+      const end   = inpQuote.selectionEnd;
+      if (start === end) return; // nothing selected
+      const val = inpQuote.value;
+      inpQuote.value = val.slice(0, start) + open + val.slice(start, end) + close + val.slice(end);
+      inpQuote.focus();
+      inpQuote.setSelectionRange(start + open.length, end + open.length);
+      update();
     }
 
-    function toggleFmt(key, btnId) {
-      fmtState[key] = !fmtState[key];
-      document.getElementById(btnId).classList.toggle('active', fmtState[key]);
-      applyCardStyles();
-    }
+    document.getElementById('fmt-b').addEventListener('mousedown', e => e.preventDefault());
+    document.getElementById('fmt-i').addEventListener('mousedown', e => e.preventDefault());
+    document.getElementById('fmt-u').addEventListener('mousedown', e => e.preventDefault());
+    document.getElementById('fmt-s').addEventListener('mousedown', e => e.preventDefault());
 
-    document.getElementById('fmt-b').addEventListener('click', () => toggleFmt('bold', 'fmt-b'));
-    document.getElementById('fmt-i').addEventListener('click', () => toggleFmt('italic', 'fmt-i'));
-    document.getElementById('fmt-u').addEventListener('click', () => toggleFmt('underline', 'fmt-u'));
-    document.getElementById('fmt-s').addEventListener('click', () => toggleFmt('strikethrough', 'fmt-s'));
+    document.getElementById('fmt-b').addEventListener('click', () => wrapSelection('**', '**'));
+    document.getElementById('fmt-i').addEventListener('click', () => wrapSelection('*', '*'));
+    document.getElementById('fmt-u').addEventListener('click', () => wrapSelection('_', '_'));
+    document.getElementById('fmt-s').addEventListener('click', () => wrapSelection('~~', '~~'));
 
     document.getElementById('fmt-caps').addEventListener('click', () => {
       inpQuote.value = inpQuote.value.toUpperCase();
-      cardQuote.style.textTransform = 'uppercase';
       update();
     });
     document.getElementById('fmt-lower').addEventListener('click', () => {
       inpQuote.value = inpQuote.value.toLowerCase();
-      cardQuote.style.textTransform = 'none';
       update();
     });
+
+    // ── Markdown → HTML ──
+    function parseMarkdown(text) {
+      // escape HTML first
+      let s = text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      // order matters: bold before italic
+      s = s.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+      s = s.replace(/\*(.*?)\*/g,     '<em>$1</em>');
+      s = s.replace(/_(.*?)_/g,       '<u>$1</u>');
+      s = s.replace(/~~(.*?)~~/g,     '<s>$1</s>');
+      // newlines
+      s = s.replace(/\n/g, '<br>');
+      return s;
+    }
 
     // ── Auto-fit font size ──
     function autoFitFont() {
@@ -343,12 +360,12 @@
     }
 
     function update() {
-      cardQuote.innerText  = inpQuote.value  || 'Tulis quotes disini';
+      const raw = inpQuote.value || 'Tulis quotes disini';
+      cardQuote.innerHTML  = parseMarkdown(raw);
       cardAuthor.innerText = inpAuthor.value || '— Nama';
       card.style.background   = inpBg.value;
       cardQuote.style.color   = inpText.value;
       cardAuthor.style.color  = inpAc.value;
-      applyCardStyles();
       autoFitFont();
     }
 

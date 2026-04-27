@@ -161,7 +161,7 @@
       touch-action:manipulation;
     }
     .fmt-bar button:hover{background:#eee;}
-    .fmt-bar button.on{background:#1a1a1a;color:#fff;border-color:#1a1a1a;}
+    .fmt-hint{font-size:10.5px;color:#bbb;margin-top:2px;}
 
     /* alignment buttons */
     .align-bar{display:flex;gap:4px;}
@@ -269,13 +269,14 @@
     <div class="field">
       <label>Teks Quote</label>
       <div class="fmt-bar">
-        <button id="fb" title="Bold"><b>B</b></button>
-        <button id="fi" title="Italic"><i>I</i></button>
-        <button id="fu" title="Underline"><u>U</u></button>
-        <button id="fs" title="Strikethrough"><s>S</s></button>
+        <button id="fb" title="Bold — wrap pilihan teks dengan **"><b>B</b></button>
+        <button id="fi" title="Italic — wrap pilihan teks dengan *"><i>I</i></button>
+        <button id="fu" title="Underline — wrap pilihan teks dengan _"><u>U</u></button>
+        <button id="fs" title="Strikethrough — wrap pilihan teks dengan ~~"><s>S</s></button>
         <button id="fAA" title="UPPERCASE">AA</button>
         <button id="faa" title="lowercase">aa</button>
       </div>
+      <div class="fmt-hint">Pilih kata → klik B/I/U/S untuk format per kata</div>
       <textarea id="inp-quote" spellcheck="false">Tulis quotes disini</textarea>
     </div>
 
@@ -385,28 +386,38 @@
     scaleCard();
     window.addEventListener('resize', scaleCard);
 
-    // ── Formatting ──
-    const fmt = { bold:false, italic:false, underline:false, strike:false };
-
-    function applyFmt() {
-      cardQuote.style.fontWeight     = fmt.bold    ? '700' : '400';
-      cardQuote.style.fontStyle      = fmt.italic  ? 'italic' : 'normal';
-      cardQuote.style.textDecoration = fmt.underline ? 'underline' : fmt.strike ? 'line-through' : 'none';
-      cardTitle.style.fontStyle      = fmt.italic  ? 'italic' : 'normal';
+    // ── Inline wrap helper ──
+    function wrapSelection(open, close) {
+      const start = inpQuote.selectionStart;
+      const end   = inpQuote.selectionEnd;
+      if (start === end) return;
+      const val = inpQuote.value;
+      inpQuote.value = val.slice(0, start) + open + val.slice(start, end) + close + val.slice(end);
+      inpQuote.focus();
+      inpQuote.setSelectionRange(start + open.length, end + open.length);
+      update();
     }
 
-    function toggleFmt(key, id) {
-      fmt[key] = !fmt[key];
-      document.getElementById(id).classList.toggle('on', fmt[key]);
-      applyFmt();
-    }
-
-    document.getElementById('fb').addEventListener('click', () => toggleFmt('bold','fb'));
-    document.getElementById('fi').addEventListener('click', () => toggleFmt('italic','fi'));
-    document.getElementById('fu').addEventListener('click', () => toggleFmt('underline','fu'));
-    document.getElementById('fs').addEventListener('click', () => toggleFmt('strike','fs'));
+    ['fb','fi','fu','fs'].forEach(id => {
+      document.getElementById(id).addEventListener('mousedown', e => e.preventDefault());
+    });
+    document.getElementById('fb').addEventListener('click', () => wrapSelection('**','**'));
+    document.getElementById('fi').addEventListener('click', () => wrapSelection('*','*'));
+    document.getElementById('fu').addEventListener('click', () => wrapSelection('_','_'));
+    document.getElementById('fs').addEventListener('click', () => wrapSelection('~~','~~'));
     document.getElementById('fAA').addEventListener('click', () => { inpQuote.value = inpQuote.value.toUpperCase(); update(); });
     document.getElementById('faa').addEventListener('click', () => { inpQuote.value = inpQuote.value.toLowerCase(); update(); });
+
+    // ── Markdown → HTML ──
+    function parseMarkdown(text) {
+      let s = text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      s = s.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+      s = s.replace(/\*(.*?)\*/g,     '<em>$1</em>');
+      s = s.replace(/_(.*?)_/g,       '<u>$1</u>');
+      s = s.replace(/~~(.*?)~~/g,     '<s>$1</s>');
+      s = s.replace(/\n/g, '<br>');
+      return s;
+    }
 
     // ── Alignment ──
     let currentAlign = 'left';
@@ -481,13 +492,13 @@
     // ── Main update ──
     function update() {
       cardTitle.innerText  = inpTitle.value;
-      cardQuote.innerText  = inpQuote.value   || 'Tulis quotes disini';
+      const raw = inpQuote.value || 'Tulis quotes disini';
+      cardQuote.innerHTML  = parseMarkdown(raw);
       cardAuthor.innerText = inpAuthor.value  || '— Nama';
       card.style.background   = cBg.value;
       cardQuote.style.color   = cText.value;
       cardAuthor.style.color  = cAuthor.value;
       cardTitle.style.color   = cTitle.value;
-      applyFmt();
       autoFit();
     }
 
@@ -500,8 +511,6 @@
       inpAuthor.value = '— recausze';
       cBg.value='#111111'; cText.value='#ffffff';
       cAuthor.value='#888888'; cTitle.value='#ffffff';
-      Object.keys(fmt).forEach(k => { fmt[k]=false; });
-      ['fb','fi','fu','fs'].forEach(id => document.getElementById(id).classList.remove('on'));
       document.querySelectorAll('.preset-swatch').forEach((s,i) => s.classList.toggle('on', i===0));
       update();
     });
