@@ -12,6 +12,7 @@
     html,body{min-height:100%;min-height:-webkit-fill-available;}
 
     body {
+      width:100%;
       min-height:100vh;
       background:#e8e8e8;
       display:flex;
@@ -21,6 +22,7 @@
       gap:20px;
       font-family:'Inter',-apple-system,sans-serif;
       padding:24px 16px env(safe-area-inset-bottom, 24px);
+      overflow-x:hidden;
     }
 
     /* nav tabs */
@@ -29,11 +31,13 @@
       gap:6px;
       background:#fff;
       padding:5px;
+      width:min(100%, 540px);
       border-radius:14px;
       box-shadow:0 2px 12px rgba(0,0,0,0.08);
       flex-shrink:0;
     }
     .nav a {
+      flex:1;
       padding:8px 18px;
       border-radius:10px;
       font-size:13px;
@@ -42,12 +46,15 @@
       color:#888;
       transition:all .2s;
       white-space:nowrap;
+      text-align:center;
     }
     .nav a.active{background:#1a1a1a;color:#fff;}
     .nav a:hover:not(.active){background:#f0f0f0;color:#333;}
 
     /* card preview — JS sets size */
     .canvas-wrapper {
+      width:100%;
+      max-width:540px;
       flex-shrink:0;
       border-radius:4px;
       overflow:hidden;
@@ -98,6 +105,7 @@
       letter-spacing:0;
       margin-top:56px;
     }
+    #card-author:empty{display:none;}
 
     /* controls */
     .controls {
@@ -192,8 +200,11 @@
     .preset-swatch.on{border-color:#555;}
 
     /* color row */
-    .color-row{display:flex;gap:8px;}
-    .color-row .field{flex:1;}
+    .color-row{
+      display:grid;
+      grid-template-columns:repeat(4, minmax(0, 1fr));
+      gap:8px;
+    }
     input[type="color"]{
       width:100%;height:44px;
       border:1.5px solid #e8e8e8;
@@ -205,8 +216,7 @@
     }
 
     /* font + align two-col */
-    .two-col{display:flex;gap:10px;}
-    .two-col .field{flex:1;}
+    .two-col{display:grid;grid-template-columns:repeat(2, minmax(0, 1fr));gap:10px;}
 
     .btn-row{display:flex;gap:10px;margin-top:2px;}
     .btn-row button{
@@ -224,10 +234,25 @@
 
     hr{border:none;border-top:1px solid #f0f0f0;}
 
-    @media(max-width:400px){
-      body{gap:14px;padding:14px 12px env(safe-area-inset-bottom,14px);}
+    @media(max-width:640px){
+      body{gap:16px;padding:16px 12px calc(env(safe-area-inset-bottom, 0px) + 16px);}
       .controls{padding:16px 14px;}
-      .two-col{flex-direction:column;}
+      .two-col{grid-template-columns:1fr;}
+      .color-row{grid-template-columns:repeat(2, minmax(0, 1fr));}
+      .btn-row{flex-direction:column-reverse;}
+      .btn-row button{min-height:46px;}
+    }
+
+    @media(max-width:480px){
+      .nav a{padding-inline:12px;}
+      .controls-header{align-items:flex-start;gap:8px;flex-direction:column;}
+      .preset-row{gap:8px;}
+      .preset-swatch{width:38px;height:38px;}
+      .fmt-bar button,.align-bar button{min-height:38px;}
+    }
+
+    @media(max-width:360px){
+      .color-row{grid-template-columns:1fr;}
     }
   </style>
 </head>
@@ -245,7 +270,7 @@
       <div class="quote-body">
         <p id="card-title">Self Reminder:</p>
         <p id="card-quote">Tulis quotes disini</p>
-        <p id="card-author">— recausze</p>
+        <p id="card-author"></p>
       </div>
     </div>
   </div>
@@ -283,7 +308,7 @@
     <!-- Author -->
     <div class="field">
       <label>Author</label>
-      <input type="text" id="inp-author" value="— recausze" placeholder="— Nama"/>
+      <input type="text" id="inp-author" value="" placeholder="Opsional, boleh kosong"/>
     </div>
 
     <hr/>
@@ -377,7 +402,9 @@
 
     // ── Dynamic scale ──
     function scaleCard() {
-      const maxW = Math.min(window.innerWidth - 32, 540);
+      const bodyStyles = getComputedStyle(document.body);
+      const horizontalPadding = parseFloat(bodyStyles.paddingLeft) + parseFloat(bodyStyles.paddingRight);
+      const maxW = Math.min(Math.max(document.documentElement.clientWidth - horizontalPadding, 280), 540);
       const scale = maxW / 1080;
       wrapper.style.width  = (1080 * scale) + 'px';
       wrapper.style.height = (1080 * scale) + 'px';
@@ -477,24 +504,29 @@
     // ── Auto-fit ──
     function autoFit() {
       cardQuote.style.fontSize = MAX_FONT + 'px';
-      const titleH  = cardTitle.scrollHeight || 0;
-      const authorH = 80;
-      const gap     = 48 + 56;
+      const hasTitle = cardTitle.textContent.trim().length > 0;
+      const hasAuthor = cardAuthor.textContent.trim().length > 0;
+      const titleH  = hasTitle ? cardTitle.scrollHeight : 0;
+      const titleGap = hasTitle ? 48 : 0;
+      const authorH = hasAuthor ? cardAuthor.scrollHeight : 0;
+      const authorGap = hasAuthor ? 56 : 0;
       const budget  = 1080 * 0.78;
       let size = MAX_FONT;
       while (size > MIN_FONT) {
         cardQuote.style.fontSize = size + 'px';
-        if (titleH + cardQuote.scrollHeight + authorH + gap <= budget) break;
+        if (titleH + titleGap + cardQuote.scrollHeight + authorH + authorGap <= budget) break;
         size -= 2;
       }
     }
 
     // ── Main update ──
     function update() {
+      const author = inpAuthor.value.trim();
       cardTitle.innerText  = inpTitle.value;
       const raw = inpQuote.value || 'Tulis quotes disini';
       cardQuote.innerHTML  = parseMarkdown(raw);
-      cardAuthor.innerText = inpAuthor.value  || '— Nama';
+      cardAuthor.innerText = author;
+      cardAuthor.style.display = author ? 'block' : 'none';
       card.style.background   = cBg.value;
       cardQuote.style.color   = cText.value;
       cardAuthor.style.color  = cAuthor.value;
@@ -508,7 +540,7 @@
     document.getElementById('btn-reset').addEventListener('click', () => {
       inpTitle.value  = 'Self Reminder:';
       inpQuote.value  = 'Tulis quotes disini';
-      inpAuthor.value = '— recausze';
+      inpAuthor.value = '';
       cBg.value='#111111'; cText.value='#ffffff';
       cAuthor.value='#888888'; cTitle.value='#ffffff';
       document.querySelectorAll('.preset-swatch').forEach((s,i) => s.classList.toggle('on', i===0));

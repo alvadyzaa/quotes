@@ -15,6 +15,7 @@
     }
 
     body {
+      width: 100%;
       min-height: 100vh;
       background: #f0f0f0;
       display: flex;
@@ -24,6 +25,7 @@
       gap: 20px;
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif;
       padding: 24px 16px env(safe-area-inset-bottom, 24px);
+      overflow-x: hidden;
     }
 
     /* ── Nav ── */
@@ -32,11 +34,13 @@
       gap: 6px;
       background: #fff;
       padding: 5px;
+      width: min(100%, 540px);
       border-radius: 14px;
       box-shadow: 0 2px 12px rgba(0,0,0,0.08);
       flex-shrink: 0;
     }
     .nav a {
+      flex: 1;
       padding: 8px 18px;
       border-radius: 10px;
       font-size: 13px;
@@ -45,6 +49,7 @@
       color: #888;
       transition: all .2s;
       white-space: nowrap;
+      text-align: center;
     }
     .nav a.active { background: #1a1a1a; color: #fff; }
     .nav a:hover:not(.active) { background: #f0f0f0; color: #333; }
@@ -52,6 +57,8 @@
     /* ── Card Preview — dynamic scale via JS ── */
     .canvas-wrapper {
       /* JS sets width & height */
+      width: 100%;
+      max-width: 540px;
       flex-shrink: 0;
       border-radius: 4px;
       overflow: hidden;
@@ -92,6 +99,7 @@
       color: #555;
       letter-spacing: -0.3px;
     }
+    #card-author:empty { display: none; }
 
     /* ── Controls ── */
     .controls {
@@ -176,8 +184,11 @@
     }
     textarea { height: 95px; line-height: 1.5; }
 
-    .color-row { display: flex; gap: 10px; }
-    .color-row .field { flex: 1; }
+    .color-row {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+    }
 
     input[type="color"] {
       width: 100%;
@@ -210,9 +221,28 @@
     #btn-download { background: #f0f0f0; color: #1a1a1a; }
 
     /* ── Responsive breakpoints ── */
-    @media (max-width: 400px) {
-      body { gap: 16px; padding: 16px 12px env(safe-area-inset-bottom, 16px); }
+    @media (max-width: 640px) {
+      body { gap: 16px; padding: 16px 12px calc(env(safe-area-inset-bottom, 0px) + 16px); }
       .controls { padding: 16px 14px; }
+      .btn-row { flex-direction: column; }
+      .btn-row button { min-height: 46px; }
+    }
+
+    @media (max-width: 480px) {
+      .nav a { padding-inline: 12px; }
+      .color-row {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+      .color-row .field:last-child {
+        grid-column: 1 / -1;
+      }
+    }
+
+    @media (max-width: 400px) {
+      .fmt-bar button {
+        min-width: 34px;
+        height: 34px;
+      }
     }
   </style>
 </head>
@@ -228,7 +258,7 @@
     <div id="quote-card">
       <div class="quote-body">
         <p id="card-quote">Tulis quotes disini</p>
-        <p id="card-author">— recausze</p>
+        <p id="card-author"></p>
       </div>
     </div>
   </div>
@@ -253,7 +283,7 @@
 
     <div class="field">
       <label>Nama / Author</label>
-      <input type="text" id="inp-author" value="— recausze" placeholder="— Nama kamu" />
+      <input type="text" id="inp-author" value="" placeholder="Opsional, boleh kosong" />
     </div>
 
     <div class="color-row">
@@ -293,7 +323,9 @@
 
     // ── Dynamic scale ──
     function scaleCard() {
-      const maxW = Math.min(window.innerWidth - 32, 540);
+      const bodyStyles = getComputedStyle(document.body);
+      const horizontalPadding = parseFloat(bodyStyles.paddingLeft) + parseFloat(bodyStyles.paddingRight);
+      const maxW = Math.min(Math.max(document.documentElement.clientWidth - horizontalPadding, 280), 540);
       const scale = maxW / 1080;
       wrapper.style.width  = (1080 * scale) + 'px';
       wrapper.style.height = (1080 * scale) + 'px';
@@ -351,18 +383,23 @@
     function autoFitFont() {
       cardQuote.style.fontSize = MAX_FONT + 'px';
       const budget = 1080 * 0.72;
+      const hasAuthor = cardAuthor.textContent.trim().length > 0;
+      const authorHeight = hasAuthor ? cardAuthor.scrollHeight : 0;
+      const authorGap = hasAuthor ? 64 : 0;
       let size = MAX_FONT;
       while (size > MIN_FONT) {
         cardQuote.style.fontSize = size + 'px';
-        if (cardQuote.scrollHeight + 80 + 64 <= budget) break;
+        if (cardQuote.scrollHeight + authorHeight + authorGap <= budget) break;
         size -= 2;
       }
     }
 
     function update() {
       const raw = inpQuote.value || 'Tulis quotes disini';
+      const author = inpAuthor.value.trim();
       cardQuote.innerHTML  = parseMarkdown(raw);
-      cardAuthor.innerText = inpAuthor.value || '— Nama';
+      cardAuthor.innerText = author;
+      cardAuthor.style.display = author ? 'block' : 'none';
       card.style.background   = inpBg.value;
       cardQuote.style.color   = inpText.value;
       cardAuthor.style.color  = inpAc.value;
